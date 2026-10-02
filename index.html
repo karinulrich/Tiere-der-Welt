@@ -1,0 +1,728 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Tiere der Welt</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', 'Trebuchet MS', sans-serif;
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  .screen { display: none; }
+  .screen.active { display: flex; }
+
+  /* ════════════════════════════════════════════════════════════
+     HUB-BILDSCHIRM
+     ════════════════════════════════════════════════════════════ */
+  #hub-screen {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(20px, 4vh, 34px);
+    padding: 30px 16px;
+    overflow: hidden;
+    background: #fffdf6;
+  }
+  #hub-screen::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0;
+    background:
+      radial-gradient(circle at 8% 6%,   rgba(210,236,249,0.98) 0%, transparent 42%),
+      radial-gradient(circle at 92% 8%,  rgba(47,143,196,0.9)  0%, transparent 46%),
+      radial-gradient(circle at 6% 94%,  rgba(239,135,90,0.95) 0%, transparent 46%),
+      radial-gradient(circle at 94% 92%, rgba(140,204,99,0.9)  0%, transparent 46%),
+      radial-gradient(circle at 50% 50%, rgba(255,214,102,0.5) 0%, transparent 60%),
+      linear-gradient(135deg, #fffdf6 0%, #fff8e8 100%);
+  }
+  #hub-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+
+  .hub-deco {
+    position: absolute;
+    z-index: 1;
+    opacity: 0.9;
+    pointer-events: none;
+    animation: deco-bob 3.4s ease-in-out infinite;
+  }
+  @keyframes deco-bob {
+    0%, 100% { transform: translateY(0) rotate(-6deg); }
+    50% { transform: translateY(-10px) rotate(6deg); }
+  }
+
+  h1.hub-title {
+    font-size: clamp(32px, 6vh, 46px);
+    color: #2b3a4a;
+    text-shadow: 0 3px 0 rgba(255,255,255,0.7), 0 6px 14px rgba(0,0,0,0.15);
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .globe {
+    display: inline-block;
+    font-size: clamp(38px, 7vh, 54px);
+    animation: globe-spin 4.5s ease-in-out infinite;
+  }
+  @keyframes globe-spin {
+    0%, 100% { transform: rotate(-8deg) scale(1); }
+    50% { transform: rotate(8deg) scale(1.08); }
+  }
+
+  .btn-grid {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(14px, 2.6vw, 22px);
+    width: 100%;
+    max-width: 520px;
+  }
+
+  .hab-btn {
+    border: none;
+    border-radius: 20px;
+    padding: clamp(22px, 4vh, 30px) 10px clamp(16px, 2.6vh, 22px);
+    font-family: inherit;
+    font-size: clamp(17px, 2.6vh, 22px);
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: #fff;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.25);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    animation: btn-bob 3s ease-in-out infinite;
+  }
+  .hab-btn:hover { transform: translateY(-4px) scale(1.04); }
+  .hab-btn:active { transform: translateY(2px) scale(0.98); }
+  .hab-btn .ic {
+    font-size: clamp(44px, 8vh, 64px);
+    filter: drop-shadow(0 3px 4px rgba(0,0,0,0.25));
+  }
+  @keyframes btn-bob {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+  .hab-btn:nth-child(1) { animation-delay: 0s; }
+  .hab-btn:nth-child(2) { animation-delay: -0.8s; }
+  .hab-btn:nth-child(3) { animation-delay: -1.6s; }
+  .hab-btn:nth-child(4) { animation-delay: -2.3s; }
+  .hab-btn:nth-child(5) { animation-delay: -1.1s; }
+  .hab-btn:nth-child(6) { animation-delay: -1.9s; }
+
+  .hab-btn.polar {
+    background: linear-gradient(160deg, #ffffff 0%, #d2ecf9 30%, #9fd4ec 60%, #3f85b3 85%, #2b6690 100%);
+    color: #15344e;
+    text-shadow: 0 1px 2px rgba(255,255,255,0.6);
+    box-shadow: 0 7px 0 #1d4b6b, 0 12px 20px rgba(21,52,78,0.3);
+  }
+  .hab-btn.polar .ic { filter: drop-shadow(0 3px 3px rgba(21,52,78,0.3)); }
+  .hab-btn.meer {
+    background: linear-gradient(160deg, #bfe8f8 0%, #4fa8d8 30%, #0f4c75 65%, #041c30 100%);
+    box-shadow: 0 7px 0 #082e49, 0 12px 20px rgba(4,28,48,0.4);
+  }
+  .hab-btn.outback {
+    background: linear-gradient(160deg, #ffe6bc 0%, #ffd166 28%, #f6b05e 55%, #c85f2b 80%, #a8431c 100%);
+    box-shadow: 0 7px 0 #8a3e17, 0 12px 20px rgba(92,36,16,0.35);
+  }
+  .hab-btn.regenwald {
+    background: linear-gradient(160deg, #e6f6d9 0%, #a8dd85 28%, #8ccc63 55%, #4f9c34 80%, #2d7a1f 100%);
+    box-shadow: 0 7px 0 #1a4f10, 0 12px 20px rgba(26,79,16,0.35);
+  }
+  .hab-btn.savanne {
+    background: linear-gradient(160deg, #fff7df 0%, #ffecb3 24%, #e0b563 55%, #a9762c 85%, #5c4423 100%);
+    box-shadow: 0 7px 0 #3d2e18, 0 12px 20px rgba(92,68,35,0.35);
+  }
+  .hab-btn.wald {
+    background: linear-gradient(160deg, #eef3e0 0%, #c7dba0 26%, #9ec07a 55%, #4f6b32 82%, #2b3620 100%);
+    box-shadow: 0 7px 0 #1b2314, 0 12px 20px rgba(43,54,32,0.35);
+  }
+
+  /* ════════════════════════════════════════════════════════════
+     LEBENSRAUM-BILDSCHIRME — gemeinsame Struktur
+     ════════════════════════════════════════════════════════════ */
+  .hab-screen {
+    position: relative;
+    min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    overflow: hidden;
+    padding: clamp(14px, 3vh, 26px) 16px 40px;
+  }
+
+  .hab-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+
+  .hab-topbar { position: relative; z-index: 2; width: 100%; max-width: 640px; display: flex; justify-content: flex-start; margin-bottom: clamp(10px, 3vh, 24px); }
+  .hab-back {
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.7);
+    background: rgba(255,255,255,0.55);
+    color: var(--deep);
+    padding: 8px 18px;
+    border-radius: 999px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: bold;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+    transition: background 0.15s ease;
+  }
+  .hab-back:hover { background: rgba(255,255,255,0.8); }
+
+  .hab-header { position: relative; z-index: 2; text-align: center; margin-bottom: clamp(26px, 5vh, 46px); }
+  .hab-header h1 {
+    font-size: clamp(28px, 5.5vh, 42px);
+    color: var(--deep);
+    text-shadow: 0 2px 8px rgba(255,255,255,0.65);
+    margin-bottom: 10px;
+  }
+  .hab-header p { font-size: clamp(14px, 2vh, 18px); color: var(--mid); opacity: 0.9; }
+
+  .game-tiles {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(18px, 3vw, 30px);
+    justify-content: center;
+    width: 100%;
+    max-width: 640px;
+  }
+
+  .game-tile {
+    text-decoration: none;
+    flex: 1 1 220px;
+    max-width: 270px;
+    background: linear-gradient(160deg, #ffffff, var(--foam));
+    border-radius: 24px;
+    padding: clamp(26px, 4.5vh, 38px) 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 9px 0 var(--deep), 0 16px 24px rgba(0,0,0,0.3);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .game-tile:hover { transform: translateY(-5px) scale(1.03); }
+  .game-tile:active { transform: translateY(4px); box-shadow: 0 4px 0 var(--deep), 0 6px 10px rgba(0,0,0,0.2); }
+  .game-tile .tile-ic { font-size: clamp(46px, 8vh, 64px); }
+  .game-tile .tile-name { font-size: clamp(18px, 2.6vh, 23px); font-weight: bold; color: var(--deep); text-align: center; }
+  .game-tile .tile-sub { font-size: clamp(12px, 1.7vh, 14px); color: var(--mid); opacity: 0.85; }
+
+  /* ---------- Polartiere: Hintergrund + fallender Schnee ---------- */
+  #screen-polar {
+    --deep: #15344e; --mid: #2b6690; --mid2: #3f85b3; --light: #9fd4ec; --foam: #f3fafd;
+    background: linear-gradient(180deg, #d7eefb 0%, #e7f5fb 30%, #f4fafd 55%, #ffffff 100%);
+  }
+  #screen-polar .snowflake {
+    position: absolute; top: -8vh; color: #ffffff;
+    text-shadow: 0 1px 3px rgba(43,102,144,0.35);
+    animation: polar-fall linear infinite; opacity: 0.85;
+  }
+  @keyframes polar-fall {
+    0%   { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+    8%   { opacity: 0.85; }
+    92%  { opacity: 0.7; }
+    100% { transform: translateY(118vh) translateX(26px) rotate(180deg); opacity: 0; }
+  }
+
+  /* ---------- Meerestiere: Hintergrund + aufsteigende Blasen ---------- */
+  #screen-meer {
+    --deep: #041c30; --mid: #0b3d63; --mid2: #0f4c75; --light: #4fa8d8; --foam: #eaf6fb;
+    background: linear-gradient(180deg, #e3f8fd 0%, #b7e8f5 22%, #7cd0ec 42%, #4fb3d9 62%, #2f8fc4 80%, #14649a 100%);
+  }
+  #screen-meer .bubble {
+    position: absolute; bottom: -60px; border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.75), rgba(255,255,255,0.12) 70%);
+    animation: meer-rise linear infinite; opacity: 0.6;
+  }
+  @keyframes meer-rise {
+    0%   { transform: translateY(0) translateX(0); opacity: 0; }
+    10%  { opacity: 0.6; }
+    90%  { opacity: 0.4; }
+    100% { transform: translateY(-115vh) translateX(20px); opacity: 0; }
+  }
+
+  /* ---------- Australische Tiere: Sonnenuntergang + Steine ---------- */
+  #screen-outback {
+    --deep: #5c2410; --mid: #a8431c; --mid2: #c85f2b; --light: #ffd9a8; --foam: #fff6ec;
+    background: linear-gradient(180deg, #ffe9c2 0%, #ffd9a0 22%, #ffc082 45%, #f9a06c 65%, #ef875a 85%, #e3754e 100%);
+  }
+  #screen-outback .rock-outcrop {
+    position: absolute; bottom: 4px;
+    border-radius: 48% 52% 45% 55% / 60% 55% 45% 40%;
+    background: linear-gradient(155deg, rgba(244,168,104,0.92), rgba(224,134,62,0.75));
+    box-shadow: 0 3px 8px rgba(120,60,30,0.18);
+  }
+
+  /* ---------- Regenwald: Hintergrund + fallende Blätter ---------- */
+  #screen-regenwald {
+    --deep: #1a4f10; --mid: #2d7a1f; --mid2: #4f9c34; --light: #cdeab8; --foam: #f6fbf0;
+    background: linear-gradient(180deg, #f7fcef 0%, #e3f4cb 20%, #b9e293 42%, #8ccc63 62%, #5fab3f 82%, #458a2c 100%);
+  }
+  #screen-regenwald .leaf-deco {
+    position: absolute;
+    background: linear-gradient(135deg, var(--mid2), var(--deep));
+    border-radius: 0% 100% 0% 100% / 0% 100% 0% 100%;
+    box-shadow: 0 3px 8px rgba(10,40,5,0.25);
+    opacity: 0.8;
+  }
+  #screen-regenwald .leaf-particle { position: absolute; top: -8vh; animation: rw-fall linear infinite; opacity: 0; pointer-events: none; }
+  #screen-regenwald .leaf-particle.glyph { filter: drop-shadow(0 2px 3px rgba(10,40,5,0.25)); }
+  #screen-regenwald .leaf-particle.dot { border-radius: 50%; background: var(--light); }
+  @keyframes rw-fall {
+    0%   { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+    8%   { opacity: 0.8; }
+    25%  { transform: translateY(25vh) translateX(22px) rotate(50deg); }
+    50%  { transform: translateY(50vh) translateX(-16px) rotate(-35deg); }
+    75%  { transform: translateY(75vh) translateX(24px) rotate(65deg); }
+    92%  { opacity: 0.7; }
+    100% { transform: translateY(118vh) translateX(-12px) rotate(-20deg); opacity: 0; }
+  }
+
+  /* ---------- Savanne: goldener Sonnenuntergang + wiegendes Gras ---------- */
+  #screen-savanne {
+    --deep: #5c4423; --mid: #a9762c; --mid2: #c99a4a; --light: #f0d9a0; --foam: #fff8e8;
+    background: linear-gradient(180deg, #fff7df 0%, #ffecb3 20%, #f5d888 40%, #e0b563 58%, #c99a4a 75%, #a9762c 100%);
+  }
+  #screen-savanne .sav-sun {
+    position: absolute;
+    top: 6%;
+    right: 10%;
+    width: clamp(80px, 15vh, 150px);
+    height: clamp(80px, 15vh, 150px);
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,222,160,0.95) 0%, rgba(255,179,71,0.5) 55%, transparent 75%);
+    animation: sav-shimmer 5s ease-in-out infinite alternate;
+  }
+  @keyframes sav-shimmer {
+    0%   { opacity: 0.6; transform: scale(1); }
+    100% { opacity: 1; transform: scale(1.06); }
+  }
+  #screen-savanne .sav-grass {
+    position: absolute;
+    bottom: 0;
+    transform-origin: bottom center;
+    animation: sav-sway ease-in-out infinite alternate;
+  }
+  @keyframes sav-sway {
+    0%   { transform: rotate(-5deg); }
+    100% { transform: rotate(5deg); }
+  }
+
+  /* ---------- Waldtiere: Lichtflecken + wiegende Farne ---------- */
+  #screen-wald {
+    --deep: #2b3620; --mid: #4f6b32; --mid2: #7a9452; --light: #dbe8c6; --foam: #f5f7ec;
+    background: linear-gradient(180deg, #eef3e0 0%, #d8e6bf 20%, #bcd89a 40%, #9ec07a 58%, #7a9c5a 75%, #597a40 100%);
+  }
+  #screen-wald .wald-dapple {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(240,235,190,0.8) 0%, rgba(210,220,150,0.4) 55%, transparent 75%);
+    animation: sav-shimmer ease-in-out infinite alternate;
+  }
+  #screen-wald .wald-fern {
+    position: absolute;
+    bottom: 0;
+    transform-origin: bottom center;
+    animation: sav-sway ease-in-out infinite alternate;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════ HUB ═══════════════════ -->
+<div class="screen active" id="hub-screen">
+  <div id="hub-bg"></div>
+  <h1 class="hub-title"><span class="globe">🌍</span> Tiere der Welt</h1>
+  <div class="btn-grid">
+    <button class="hab-btn polar" onclick="showScreen('screen-polar')"><span class="ic">🧊</span>Nordpol &amp; Südpol</button>
+    <button class="hab-btn meer" onclick="showScreen('screen-meer')"><span class="ic">🌊</span>Meer</button>
+    <button class="hab-btn outback" onclick="showScreen('screen-outback')"><span class="ic">🦘</span>Australien</button>
+    <button class="hab-btn regenwald" onclick="showScreen('screen-regenwald')"><span class="ic">🌴</span>Regenwald</button>
+    <button class="hab-btn savanne" onclick="showScreen('screen-savanne')"><span class="ic">🦁</span>Savanne</button>
+    <button class="hab-btn wald" onclick="showScreen('screen-wald')"><span class="ic">🦌</span>Wald</button>
+  </div>
+</div>
+
+<!-- ═══════════════════ NORDPOL & SÜDPOL ═══════════════════ -->
+<div class="screen hab-screen" id="screen-polar">
+  <div class="hab-bg" id="bg-polar"></div>
+  <div class="hab-topbar"><button class="hab-back" onclick="showScreen('hub-screen')">← Zurück</button></div>
+  <div class="hab-header">
+    <h1>🧊 Nordpol &amp; Südpol</h1>
+    <p>Wähle ein Spiel:</p>
+  </div>
+  <div class="game-tiles">
+    <a class="game-tile" href="https://karinulrich.github.io/Polartier-Memo/" target="_blank" rel="noopener">
+      <span class="tile-ic">❄️</span>
+      <span class="tile-name">Polartier-Memo</span>
+      <span class="tile-sub">Memory-Spiel</span>
+    </a>
+    <a class="game-tile" href="https://karinulrich.github.io/Polartier-Raetsel/" target="_blank" rel="noopener">
+      <span class="tile-ic">❄️</span>
+      <span class="tile-name">Polartier-Rätsel</span>
+      <span class="tile-sub">Steckbrief-Quiz</span>
+    </a>
+  </div>
+</div>
+
+<!-- ═══════════════════ MEER ═══════════════════ -->
+<div class="screen hab-screen" id="screen-meer">
+  <div class="hab-bg" id="bg-meer"></div>
+  <div class="hab-topbar"><button class="hab-back" onclick="showScreen('hub-screen')">← Zurück</button></div>
+  <div class="hab-header">
+    <h1>🌊 Meer</h1>
+    <p>Wähle ein Spiel:</p>
+  </div>
+  <div class="game-tiles">
+    <a class="game-tile" href="https://karinulrich.github.io/Meeres-Memo/" target="_blank" rel="noopener">
+      <span class="tile-ic">🐬</span>
+      <span class="tile-name">Meeres-Memo</span>
+      <span class="tile-sub">Memory-Spiel</span>
+    </a>
+    <a class="game-tile" href="https://karinulrich.github.io/Meerestier-Raetsel/" target="_blank" rel="noopener">
+      <span class="tile-ic">🐚</span>
+      <span class="tile-name">Meerestier-Rätsel</span>
+      <span class="tile-sub">Steckbrief-Quiz</span>
+    </a>
+  </div>
+</div>
+
+<!-- ═══════════════════ AUSTRALIEN ═══════════════════ -->
+<div class="screen hab-screen" id="screen-outback">
+  <div class="hab-bg" id="bg-outback"></div>
+  <div class="hab-topbar"><button class="hab-back" onclick="showScreen('hub-screen')">← Zurück</button></div>
+  <div class="hab-header">
+    <h1>🦘 Australien</h1>
+    <p>Wähle ein Spiel:</p>
+  </div>
+  <div class="game-tiles">
+    <a class="game-tile" href="https://karinulrich.github.io/Outback-Memo/" target="_blank" rel="noopener">
+      <span class="tile-ic">🦘</span>
+      <span class="tile-name">Outback-Memo</span>
+      <span class="tile-sub">Memory-Spiel</span>
+    </a>
+    <a class="game-tile" href="https://karinulrich.github.io/Outback-Raetsel/" target="_blank" rel="noopener">
+      <span class="tile-ic">🐨</span>
+      <span class="tile-name">Outback-Rätsel</span>
+      <span class="tile-sub">Steckbrief-Quiz</span>
+    </a>
+  </div>
+</div>
+
+<!-- ═══════════════════ REGENWALD ═══════════════════ -->
+<div class="screen hab-screen" id="screen-regenwald">
+  <div class="hab-bg" id="bg-regenwald"></div>
+  <div class="hab-topbar"><button class="hab-back" onclick="showScreen('hub-screen')">← Zurück</button></div>
+  <div class="hab-header">
+    <h1>🌴 Regenwald</h1>
+    <p>Wähle ein Spiel:</p>
+  </div>
+  <div class="game-tiles">
+    <a class="game-tile" href="https://karinulrich.github.io/Regenwaldmemo/" target="_blank" rel="noopener">
+      <span class="tile-ic">🦥</span>
+      <span class="tile-name">Dschungel-Memory</span>
+      <span class="tile-sub">Memory-Spiel</span>
+    </a>
+    <a class="game-tile" href="https://karinulrich.github.io/Regenwaldquiz/" target="_blank" rel="noopener">
+      <span class="tile-ic">🦜</span>
+      <span class="tile-name">Regenwald-Quiz</span>
+      <span class="tile-sub">Quiz</span>
+    </a>
+  </div>
+</div>
+
+<!-- ═══════════════════ SAVANNE ═══════════════════ -->
+<div class="screen hab-screen" id="screen-savanne">
+  <div class="hab-bg" id="bg-savanne"></div>
+  <div class="hab-topbar"><button class="hab-back" onclick="showScreen('hub-screen')">← Zurück</button></div>
+  <div class="hab-header">
+    <h1>🦁 Savanne</h1>
+    <p>Wähle ein Spiel:</p>
+  </div>
+  <div class="game-tiles">
+    <a class="game-tile" href="https://karinulrich.github.io/Savannememo/" target="_blank" rel="noopener">
+      <span class="tile-ic">🦓</span>
+      <span class="tile-name">Savanne-Memo</span>
+      <span class="tile-sub">Memory-Spiel</span>
+    </a>
+    <a class="game-tile" href="https://karinulrich.github.io/Savanneraetsel/" target="_blank" rel="noopener">
+      <span class="tile-ic">🦒</span>
+      <span class="tile-name">Savanne-Rätsel</span>
+      <span class="tile-sub">Steckbrief-Quiz</span>
+    </a>
+  </div>
+</div>
+
+<!-- ═══════════════════ WALD ═══════════════════ -->
+<div class="screen hab-screen" id="screen-wald">
+  <div class="hab-bg" id="bg-wald"></div>
+  <div class="hab-topbar"><button class="hab-back" onclick="showScreen('hub-screen')">← Zurück</button></div>
+  <div class="hab-header">
+    <h1>🦌 Wald</h1>
+    <p>Wähle ein Spiel:</p>
+  </div>
+  <div class="game-tiles">
+    <a class="game-tile" href="https://karinulrich.github.io/Waldtiermemo/" target="_blank" rel="noopener">
+      <span class="tile-ic">🦔</span>
+      <span class="tile-name">Wald-Memo</span>
+      <span class="tile-sub">Memory-Spiel</span>
+    </a>
+    <a class="game-tile" href="https://karinulrich.github.io/Waldtiereraetsel/" target="_blank" rel="noopener">
+      <span class="tile-ic">🦊</span>
+      <span class="tile-name">Wald-Rätsel</span>
+      <span class="tile-sub">Steckbrief-Quiz</span>
+    </a>
+  </div>
+</div>
+
+<script>
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+/* ---------- Hub: schwebende Deko aus allen vier Welten ---------- */
+(function decorateHub() {
+  const bg = document.getElementById('hub-bg');
+  const spots = [
+    { emoji: '❄️', left: '8%',  top: '10%', size: 26, delay: 0 },
+    { emoji: '❄️', left: '20%', top: '28%', size: 16, delay: -1.2 },
+    { emoji: '❄️', left: '4%',  top: '38%', size: 14, delay: -2.6 },
+    { emoji: '❄️', left: '16%', top: '6%',  size: 12, delay: -0.8 },
+    { emoji: '🫧', left: '88%', top: '9%',  size: 22, delay: -0.6 },
+    { emoji: '🫧', left: '78%', top: '26%', size: 15, delay: -2 },
+    { emoji: '🫧', left: '95%', top: '36%', size: 14, delay: -1.4 },
+    { emoji: '🫧', left: '84%', top: '4%',  size: 12, delay: -3 },
+    { emoji: '☀️', left: '9%',  top: '82%', size: 24, delay: -1.6 },
+    { emoji: '🍂', left: '20%', top: '90%', size: 16, delay: -0.3 },
+    { emoji: '🍂', left: '5%',  top: '62%', size: 14, delay: -2.2 },
+    { emoji: '☀️', left: '22%', top: '68%', size: 12, delay: -1 },
+    { emoji: '🍃', left: '88%', top: '84%', size: 22, delay: -2.4 },
+    { emoji: '🌿', left: '78%', top: '92%', size: 16, delay: -1 },
+    { emoji: '🍃', left: '94%', top: '64%', size: 14, delay: -0.5 },
+    { emoji: '🌿', left: '80%', top: '60%', size: 12, delay: -2.8 },
+    { emoji: '☀️', left: '14%', top: '96%', size: 14, delay: -1.8 },
+    { emoji: '🍂', left: '28%', top: '78%', size: 12, delay: -0.6 },
+    { emoji: '🍂', left: '6%',  top: '98%', size: 12, delay: -3.2 },
+    { emoji: '🌿', left: '70%', top: '96%', size: 14, delay: -1.3 },
+    { emoji: '🍃', left: '64%', top: '80%', size: 12, delay: -2.1 },
+    { emoji: '🍃', left: '96%', top: '98%', size: 12, delay: -0.2 },
+    { emoji: '🌴', left: '40%', top: '94%', size: 16, delay: -2.5 },
+    { emoji: '🦘', left: '58%', top: '96%', size: 15, delay: -0.9 },
+    { emoji: '🦁', left: '48%', top: '6%',  size: 18, delay: -1.5 },
+    { emoji: '🦌', left: '52%', top: '14%', size: 16, delay: -2.9 },
+  ];
+  spots.forEach(s => {
+    const d = document.createElement('div');
+    d.className = 'hub-deco';
+    d.textContent = s.emoji;
+    d.style.left = s.left;
+    d.style.top = s.top;
+    d.style.fontSize = s.size + 'px';
+    d.style.animationDelay = s.delay + 's';
+    bg.appendChild(d);
+  });
+})();
+
+/* ---------- Nordpol & Südpol: fallender Schnee ---------- */
+(function decoratePolar() {
+  const bg = document.getElementById('bg-polar');
+  const flakeChars = ['❄', '❅', '❆'];
+  for (let i = 0; i < 36; i++) {
+    const f = document.createElement('div');
+    f.className = 'snowflake';
+    const isDot = Math.random() < 0.35;
+    const size = isDot ? 3 + Math.random() * 5 : 8 + Math.random() * 18;
+    if (isDot) {
+      f.style.width = size + 'px';
+      f.style.height = size + 'px';
+      f.style.borderRadius = '50%';
+      f.style.background = '#ffffff';
+    } else {
+      f.textContent = flakeChars[Math.floor(Math.random() * flakeChars.length)];
+      f.style.fontSize = size + 'px';
+    }
+    f.style.left = Math.random() * 100 + '%';
+    f.style.animationDuration = (8 + Math.random() * 15) + 's';
+    f.style.animationDelay = (Math.random() * 16) + 's';
+    bg.appendChild(f);
+  }
+})();
+
+/* ---------- Meer: aufsteigende Blasen ---------- */
+(function decorateMeer() {
+  const bg = document.getElementById('bg-meer');
+  for (let i = 0; i < 20; i++) {
+    const b = document.createElement('div');
+    b.className = 'bubble';
+    const size = 5 + Math.random() * 18;
+    b.style.width = size + 'px';
+    b.style.height = size + 'px';
+    b.style.left = Math.random() * 100 + '%';
+    b.style.animationDuration = (10 + Math.random() * 14) + 's';
+    b.style.animationDelay = (Math.random() * 14) + 's';
+    bg.appendChild(b);
+  }
+})();
+
+/* ---------- Australien: Steine im Vordergrund ---------- */
+(function decorateOutback() {
+  const bg = document.getElementById('bg-outback');
+  const rockSpots = [3, 13, 24, 38, 58, 72, 84, 94];
+  rockSpots.forEach((leftPct, i) => {
+    const r = document.createElement('div');
+    r.className = 'rock-outcrop';
+    const w = 65 + Math.random() * 110;
+    const h = w * (0.34 + Math.random() * 0.14);
+    r.style.width = w + 'px';
+    r.style.height = h + 'px';
+    r.style.left = leftPct + '%';
+    r.style.bottom = (i % 2 === 0 ? 2 : 16) + Math.random() * 10 + 'px';
+    r.style.opacity = 0.65 + Math.random() * 0.3;
+    bg.appendChild(r);
+  });
+})();
+
+/* ---------- Regenwald: Blätter am Rand + fallende Blätter ---------- */
+(function decorateRegenwald() {
+  const bg = document.getElementById('bg-regenwald');
+  const edgeSpots = [
+    { left: -4,  top: -6,  size: 150, rot: 205 },
+    { left: 14,  top: -8,  size: 110, rot: 230 },
+    { left: 80,  top: -7,  size: 140, rot: 320 },
+    { left: 96,  top: -5,  size: 100, rot: 300 },
+    { left: 4,   bottom: -8, size: 130, rot: 20 },
+    { left: 26,  bottom: -10, size: 95,  rot: -15 },
+    { left: 68,  bottom: -9, size: 120, rot: 10 },
+    { left: 90,  bottom: -7, size: 100, rot: -25 },
+  ];
+  edgeSpots.forEach(s => {
+    const leaf = document.createElement('div');
+    leaf.className = 'leaf-deco';
+    leaf.style.width = s.size + 'px';
+    leaf.style.height = (s.size * 1.3) + 'px';
+    leaf.style.left = s.left + '%';
+    if (s.top !== undefined) leaf.style.top = s.top + '%';
+    if (s.bottom !== undefined) leaf.style.bottom = s.bottom + '%';
+    leaf.style.transform = `rotate(${s.rot}deg)`;
+    bg.appendChild(leaf);
+  });
+
+  const leafChars = ['🍃', '🌿'];
+  for (let i = 0; i < 20; i++) {
+    const f = document.createElement('div');
+    const isDot = Math.random() < 0.35;
+    f.className = 'leaf-particle ' + (isDot ? 'dot' : 'glyph');
+    const size = isDot ? 4 + Math.random() * 6 : 14 + Math.random() * 14;
+    if (isDot) {
+      f.style.width = size + 'px';
+      f.style.height = size + 'px';
+    } else {
+      f.textContent = leafChars[Math.floor(Math.random() * leafChars.length)];
+      f.style.fontSize = size + 'px';
+    }
+    f.style.left = Math.random() * 100 + '%';
+    f.style.animationDuration = (9 + Math.random() * 12) + 's';
+    f.style.animationDelay = (Math.random() * 14) + 's';
+    bg.appendChild(f);
+  }
+})();
+
+/* ---------- Savanne: Sonnenschimmer + wiegende Grasbüschel ---------- */
+(function decorateSavanne() {
+  const bg = document.getElementById('bg-savanne');
+  const sun = document.createElement('div');
+  sun.className = 'sav-sun';
+  bg.appendChild(sun);
+
+  const grassSpots = [2, 12, 22, 32, 42, 52, 62, 72, 82, 92];
+  const grassColors = ['#8a9a3c', '#a9b94c', '#6f7d2e'];
+  grassSpots.forEach((leftPct, i) => {
+    const g = document.createElement('div');
+    g.className = 'sav-grass';
+    const w = 26 + Math.random() * 24;
+    const h = w * (0.9 + Math.random() * 0.3);
+    g.style.left = leftPct + '%';
+    g.style.width = w + 'px';
+    g.style.height = h + 'px';
+    g.style.opacity = 0.75 + Math.random() * 0.25;
+    g.style.animationDuration = (2.2 + Math.random() * 1.6) + 's';
+    g.style.animationDelay = (Math.random() * -2.5) + 's';
+    const c1 = grassColors[i % grassColors.length];
+    const c2 = grassColors[(i + 1) % grassColors.length];
+    g.innerHTML = `
+      <svg viewBox="0 0 40 40" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 40 Q4 20 14 2" stroke="${c1}" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M14 40 Q14 16 20 0" stroke="${c2}" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M22 40 Q24 18 30 4" stroke="${c1}" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M30 40 Q32 22 36 10" stroke="${c2}" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M18 40 Q10 24 4 14" stroke="${c2}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      </svg>`;
+    bg.appendChild(g);
+  });
+})();
+
+/* ---------- Wald: Lichtflecken + wiegende Farnbüschel ---------- */
+(function decorateWald() {
+  const bg = document.getElementById('bg-wald');
+  const dapples = [
+    { top: '6%', left: '12%', size: 80 },
+    { top: '10%', left: '72%', size: 110 },
+    { top: '4%', left: '45%', size: 60 },
+  ];
+  dapples.forEach((d, i) => {
+    const dap = document.createElement('div');
+    dap.className = 'wald-dapple';
+    dap.style.top = d.top;
+    dap.style.left = d.left;
+    dap.style.width = d.size + 'px';
+    dap.style.height = d.size + 'px';
+    dap.style.animationDuration = (4 + i * 1.3) + 's';
+    bg.appendChild(dap);
+  });
+
+  const fernSpots = [2, 12, 22, 32, 42, 52, 62, 72, 82, 92];
+  const fernColors = ['#4f6b32', '#6f8a46', '#3a4f26'];
+  fernSpots.forEach((leftPct, i) => {
+    const g = document.createElement('div');
+    g.className = 'wald-fern';
+    const w = 26 + Math.random() * 24;
+    const h = w * (0.9 + Math.random() * 0.3);
+    g.style.left = leftPct + '%';
+    g.style.width = w + 'px';
+    g.style.height = h + 'px';
+    g.style.opacity = 0.75 + Math.random() * 0.25;
+    g.style.animationDuration = (2.2 + Math.random() * 1.6) + 's';
+    g.style.animationDelay = (Math.random() * -2.5) + 's';
+    const c1 = fernColors[i % fernColors.length];
+    const c2 = fernColors[(i + 1) % fernColors.length];
+    g.innerHTML = `
+      <svg viewBox="0 0 40 40" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+        <path d="M6 40 Q4 20 14 2" stroke="${c1}" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M14 40 Q14 16 20 0" stroke="${c2}" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M22 40 Q24 18 30 4" stroke="${c1}" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M30 40 Q32 22 36 10" stroke="${c2}" stroke-width="3" fill="none" stroke-linecap="round"/>
+        <path d="M18 40 Q10 24 4 14" stroke="${c2}" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      </svg>`;
+    bg.appendChild(g);
+  });
+})();
+</script>
+</body>
+</html>
