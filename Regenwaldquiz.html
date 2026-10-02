@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regenwald Quiz</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --deep: #1a4f10; --mid: #2d7a1f; --mid2: #4f9c34; --light: #cdeab8; --foam: #f6fbf0;
+    --accent: #ffd166; --accent2: #f4b63f; --coral: #e84444; --coral2: #f4a69f; --success: #4fa17a;
+  }
+  body { font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', 'Trebuchet MS', sans-serif; background: linear-gradient(180deg, #f7fcef 0%, #e3f4cb 20%, #b9e293 42%, #8ccc63 62%, #5fab3f 82%, #458a2c 100%); min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 0 0 40px 0; position: relative; }
+
+  /* ---------- decorative jungle background: leafy fronds along the edges ---------- */
+  .jungle-bg { position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+  .leaf-deco {
+    position: absolute;
+    background: linear-gradient(135deg, var(--mid2), var(--deep));
+    border-radius: 0% 100% 0% 100% / 0% 100% 0% 100%;
+    box-shadow: 0 3px 8px rgba(10,40,5,0.25);
+    opacity: 0.8;
+  }
+  .leaf-deco::after {
+    content: ''; position: absolute; top: 10%; left: 50%; width: 2px; height: 78%;
+    background: rgba(255,255,255,0.22); transform: translateX(-50%) rotate(-6deg);
+  }
+
+  .leaf-particle {
+    position: absolute;
+    top: -8vh;
+    animation: leaf-fall linear infinite;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .leaf-particle.glyph { filter: drop-shadow(0 2px 3px rgba(10,40,5,0.25)); }
+  .leaf-particle.dot { border-radius: 50%; background: var(--light); }
+
+  @keyframes leaf-fall {
+    0%   { transform: translateY(0) translateX(0) rotate(0deg); opacity: 0; }
+    8%   { opacity: 0.8; }
+    25%  { transform: translateY(25vh) translateX(22px) rotate(50deg); }
+    50%  { transform: translateY(50vh) translateX(-16px) rotate(-35deg); }
+    75%  { transform: translateY(75vh) translateX(24px) rotate(65deg); }
+    92%  { opacity: 0.7; }
+    100% { transform: translateY(118vh) translateX(-12px) rotate(-20deg); opacity: 0; }
+  }
+
+  .game-bar { position: relative; z-index: 1; width: 100%; max-width: 520px; display: flex; align-items: center; justify-content: space-between; margin: 4px 0 -6px; padding: 0 2px; }
+  .stat-pill { font-size: 15px; background: rgba(255,255,255,0.18); color: var(--foam); padding: 5px 14px; border-radius: 999px; }
+  #back-btn { display: none; background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.35); color: var(--foam); font-family: inherit; font-size: 14px; padding: 6px 14px; border-radius: 999px; cursor: pointer; transition: background 0.15s; }
+  #back-btn:hover { background: rgba(255,255,255,0.32); }
+
+  #start { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 24px; padding: 30px 20px; max-width: 480px; width: 100%; }
+  #start .logo { font-size: 64px; }
+  #start h2 { font-size: 28px; color: var(--foam); text-align: center; text-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+  #start p { font-size: 18px; color: var(--foam); text-align: center; line-height: 1.5; opacity: 0.92; }
+  .mode-btn { width: 100%; background: linear-gradient(160deg, #ffffff, var(--foam)); border: 3px solid var(--mid); border-radius: 16px; padding: 18px 20px; cursor: pointer; display: flex; align-items: center; gap: 16px; transition: all 0.15s; text-align: left; box-shadow: 0 6px 0 var(--deep), 0 10px 16px rgba(0,0,0,0.25); }
+  .mode-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 0 var(--deep), 0 14px 20px rgba(0,0,0,0.3); }
+  .mode-btn:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--deep), 0 4px 8px rgba(0,0,0,0.2); }
+  .mode-btn .mode-icon { font-size: 36px; flex-shrink: 0; }
+  .mode-btn .mode-title { font-size: 22px; color: var(--deep); font-family: inherit; }
+  .mode-btn .mode-sub { font-size: 15px; color: #5a6e52; font-family: inherit; }
+
+  #game { position: relative; z-index: 1; display: none; flex-direction: column; align-items: center; width: 100%; max-width: 520px; padding: 20px 16px; gap: 18px; }
+
+  #progress-wrap { width: 100%; display: flex; flex-direction: column; gap: 6px; }
+  #progress-label { font-size: 16px; color: var(--foam); display: flex; justify-content: space-between; text-shadow: 0 1px 4px rgba(0,0,0,0.25); }
+  #segments { display: flex; gap: 4px; width: 100%; height: 18px; }
+  .seg { flex: 1; border-radius: 6px; background: rgba(255,255,255,0.3); transition: background 0.3s; }
+  .seg.done-correct { background: var(--success); }
+  .seg.done-wrong { background: var(--coral); }
+  .seg.active { background: var(--accent); }
+
+  #question-card { width: 100%; background: linear-gradient(160deg, #ffffff, var(--foam)); border-radius: 20px; padding: 24px 22px; box-shadow: 0 6px 20px rgba(0,0,0,0.25); border: 2px solid var(--light); transition: border-color 0.25s; }
+  #question-card.card-wrong { border-color: var(--coral); }
+  #question-card.card-correct { border-color: var(--success); }
+  #question-num { font-size: 14px; color: #7a9070; margin-bottom: 8px; }
+  #question-text { font-size: 22px; color: var(--deep); line-height: 1.4; }
+
+  #answers { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+
+  .rf-row { display: flex; gap: 12px; width: 100%; }
+  .rf-btn { flex: 1; padding: 20px 10px; border-radius: 16px; border: 3px solid; font-family: inherit; font-size: 26px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .rf-btn.richtig { border-color: var(--mid); background: #fff; color: var(--mid); }
+  .rf-btn.falsch { border-color: var(--coral); background: #fff; color: var(--coral); }
+  .rf-btn.richtig:not(:disabled):hover { background: rgba(79,161,122,0.18); transform: scale(1.03); }
+  .rf-btn.falsch:not(:disabled):hover { background: rgba(232,68,68,0.12); transform: scale(1.03); }
+  .rf-btn:disabled { cursor: not-allowed; transform: none; }
+  .rf-btn.chosen-correct { background: rgba(79,161,122,0.22); border-color: var(--success); }
+  .rf-btn.chosen-wrong { background: rgba(232,68,68,0.12); border-color: var(--coral); }
+  .rf-btn.reveal-correct { background: rgba(79,161,122,0.22); border-color: var(--success); }
+
+  .mc-btn { width: 100%; padding: 16px 20px; border-radius: 14px; border: 3px solid var(--light); background: #fff; font-family: inherit; font-size: 20px; color: var(--deep); cursor: pointer; text-align: left; transition: all 0.15s; display: flex; align-items: center; gap: 12px; }
+  .mc-btn:not(:disabled):hover { border-color: var(--mid); background: var(--foam); transform: translateX(4px); }
+  .mc-btn:disabled { cursor: not-allowed; transform: none; }
+  .mc-btn .mc-letter { width: 34px; height: 34px; border-radius: 50%; background: var(--light); color: var(--deep); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; border: 2px solid var(--mid2); }
+  .mc-btn.chosen-correct { background: rgba(79,161,122,0.22); border-color: var(--success); }
+  .mc-btn.chosen-correct .mc-letter { background: var(--success); color:#fff; border-color: var(--success); }
+  .mc-btn.chosen-wrong { background: rgba(232,68,68,0.12); border-color: var(--coral); }
+  .mc-btn.chosen-wrong .mc-letter { background: var(--coral); color:#fff; border-color: var(--coral); }
+  .mc-btn.reveal-correct { background: rgba(79,161,122,0.22); border-color: var(--success); }
+  .mc-btn.reveal-correct .mc-letter { background: var(--success); color:#fff; border-color: var(--success); }
+
+  #win { position: relative; z-index: 1; display: none; flex-direction: column; align-items: center; gap: 20px; padding: 30px 20px; max-width: 480px; width: 100%; }
+  #win .trophy { font-size: 80px; animation: bounce 0.6s ease; }
+  @keyframes bounce { 0%,100%{transform:translateY(0);} 40%{transform:translateY(-20px);} }
+  #win h2 { font-size: 30px; color: var(--foam); text-align: center; text-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+  #win .score-big { font-size: 48px; color: var(--accent); }
+  #win .stars { font-size: 50px; letter-spacing: 4px; }
+  #win p { font-size: 20px; color: var(--foam); text-align: center; opacity: 0.92; }
+  .win-btn { background: linear-gradient(160deg, var(--accent), var(--accent2)); color: #4a3300; border: none; border-radius: 14px; padding: 16px 32px; font-family: inherit; font-size: 22px; cursor: pointer; transition: all 0.15s; box-shadow: 0 5px 0 #c98f1f, 0 8px 16px rgba(0,0,0,0.25); }
+  .win-btn:hover { transform: translateY(-2px); }
+  .win-btn.secondary { background: linear-gradient(160deg, #ffffff, var(--foam)); color: var(--deep); border: 3px solid var(--foam); box-shadow: 0 5px 0 var(--deep), 0 8px 16px rgba(0,0,0,0.2); }
+  .win-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+</style>
+</head>
+<body>
+<button id="back-to-hub-btn" onclick="history.back()" style="position:fixed;top:10px;left:10px;z-index:999;cursor:pointer;border:1px solid rgba(0,0,0,0.12);background:rgba(255,255,255,0.88);color:#333;padding:7px 14px;border-radius:999px;font-family:Verdana,Geneva,'Trebuchet MS',sans-serif;font-size:13px;font-weight:bold;box-shadow:0 2px 8px rgba(0,0,0,0.25);">← Zurück</button>
+
+
+<div class="jungle-bg" id="jungle-bg"></div>
+
+<div id="start">
+  <div class="logo">🌴</div>
+  <h2>Regenwald Quiz</h2>
+  <p>Was weisst du über den Regenwald? Wähle dein Niveau!</p>
+  <button class="mode-btn" onclick="startGame('easy')">
+    <span class="mode-icon">🌿</span>
+    <div><div class="mode-title">Einfach</div><div class="mode-sub">Richtig oder Falsch</div></div>
+  </button>
+  <button class="mode-btn" onclick="startGame('hard')">
+    <span class="mode-icon">🌴</span>
+    <div><div class="mode-title">Schwer</div><div class="mode-sub">4 Antworten zur Auswahl</div></div>
+  </button>
+</div>
+
+<div id="game">
+  <div class="game-bar">
+    <button id="back-btn" onclick="showStart()">← Zurück</button>
+    <div id="score-display" class="stat-pill">0 / 0</div>
+  </div>
+  <div id="progress-wrap">
+    <div id="progress-label">
+      <span id="prog-text">Frage 1 von 15</span>
+      <span id="prog-score">✅ 0 &nbsp; ❌ 0</span>
+    </div>
+    <div id="segments"></div>
+  </div>
+  <div id="question-card">
+    <div id="question-num"></div>
+    <div id="question-text"></div>
+  </div>
+  <div id="answers"></div>
+</div>
+
+<div id="win">
+  <div class="trophy">🏆</div>
+  <h2 id="win-title">Super gemacht!</h2>
+  <div class="score-big" id="win-score"></div>
+  <div class="stars" id="win-stars"></div>
+  <p id="win-msg"></p>
+  <div class="win-btns">
+    <button class="win-btn secondary" onclick="showStart()">🏠 Startseite</button>
+    <button class="win-btn" onclick="restartSame()">🔄 Nochmal</button>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+// EINFACH — Richtig / Falsch
+// Gruppen: Wetter | Stockwerke | Tiere (kein Kolibri/Frosch) | Abholzung & Geo
+// ════════════════════════════════════════════════════════════════
+
+const E_WETTER = [
+  { q: "Es regnet fast jeden Tag im Regenwald.", a: true },
+  { q: "Im Regenwald ist es angenehm kühl, weil es so viel regnet.", a: false },
+  { q: "Am Morgen liegt Nebel über dem Regenwald.", a: true },
+  { q: "Am Mittag scheint die Sonne stark und es ist sehr warm.", a: true },
+  { q: "Am Nachmittag werden die Wolken immer dichter und es wird sehr heiss.", a: true },
+  { q: "Am frühen Abend regnet es stark im Regenwald.", a: true },
+  { q: "Am späten Abend steigt Nebel auf.", a: true },
+  { q: "Das Wetter im Regenwald ist an allen Tagen im Jahr etwa gleich.", a: true },
+  { q: "Im Regenwald gibt es vier Jahreszeiten wie bei uns.", a: false },
+  { q: "Am Morgen dringt die Sonne sofort kräftig durch das Blätterdach.", a: false },
+];
+
+const E_STOCKWERKE = [
+  // Kronendach / obere Baumschicht
+  { q: "Die Baumkronen der hohen Bäume wachsen dicht zusammen – fast wie ein Dach.", a: true },
+  { q: "In der oberen Baumschicht (Kronendach) leben die meisten Tiere.", a: true },
+  { q: "Im Kronendach findet man viele Vögel, Affen und Faultiere.", a: true },
+  { q: "Das Kronendach lässt kaum Licht bis zum Boden durch.", a: true },
+  // Überständer
+  { q: "Überständer sind einzelne Baumriesen, die über alle anderen Bäume hinausragen.", a: true },
+  { q: "Die Harpyie ist ein Greifvogel, der in den Überständern nach Beute späht.", a: true },
+  { q: "Überständer sind kleine Büsche am Boden des Regenwaldes.", a: false },
+  // Untere Baumschicht
+  { q: "In der unteren Baumschicht wachsen hauptsächlich junge Bäume.", a: true },
+  { q: "Manche junge Bäume der unteren Schicht werden später zu riesigen Baumriesen.", a: true },
+  // Kraut- & Strauchschicht
+  { q: "In der Kraut- & Strauchschicht wachsen Moose, Farne und kleine Bäume.", a: true },
+  { q: "Der Tapir lebt im Unterholz der Kraut- & Strauchschicht.", a: true },
+  { q: "In der Kraut- & Strauchschicht brauchen die Pflanzen viel Sonnenlicht.", a: false },
+  // Bodenschicht
+  { q: "In der Bodenschicht findet man Wurzeln und Pilze.", a: true },
+  { q: "An der Bodenschicht ist es sehr hell und warm.", a: false },
+  { q: "Die Bodenschicht besteht aus Wurzeln, Ästen und abgestorbenen Blättern.", a: true },
+  // Allgemein
+  { q: "Die Bäume im Regenwald verlieren im Herbst ihre Blätter.", a: false },
+  { q: "Am Boden des Regenwaldes wachsen viele Blumen.", a: false },
+  { q: "Die Regenwaldbäume sind ungefähr gleich hoch wie unsere Bäume.", a: false },
+  { q: "Regenwaldbäume können teilweise über 70 Meter hoch werden.", a: true },
+  { q: "Der Regenwald hat fünf verschiedene Schichten.", a: true },
+];
+
+const E_TIERE = [
+  // Faultier (kein Kolibri, kein Frosch)
+  { q: "Das Faultier bewegt sich sehr langsam oben in den Baumwipfeln.", a: true },
+  { q: "Das Faultier bewegt sich sehr schnell.", a: false },
+  { q: "Im Fell des Faultiers wachsen oft Algen, deshalb schimmert es grünlich.", a: true },
+  { q: "Das Faultier ist im Regenwald dank seines grünlichen Fells gut getarnt.", a: true },
+  // Gleithörnchen
+  { q: "Das Gleithörnchen kann von Baum zu Baum gleiten.", a: true },
+  { q: "Das Gleithörnchen hat Flughäute zwischen den Beinen.", a: true },
+  // Tapir
+  { q: "Der Tapir hat sehr gute Augen.", a: false },
+  { q: "Der Tapir hat keine guten Augen, dafür kann er sehr gut hören.", a: true },
+  // Okapi
+  { q: "Das Okapi hat ein dunkelbraunes Fell und schwarz-weiss gestreifte Beine.", a: true },
+  { q: "Das Okapi ist gut an seine Umgebung angepasst.", a: true },
+  // Harpyie / Stockwerk-Kontext
+  { q: "Die Harpyie ist ein Greifvogel aus dem Regenwald.", a: true },
+];
+
+const E_ABHOLZUNG = [
+  { q: "Der Regenwald wird für Tropenholz abgeholzt.", a: true },
+  { q: "Der Regenwald wird auch für Palmöl abgeholzt.", a: true },
+  { q: "Für die Herstellung von Papier wird kein Regenwald zerstört.", a: false },
+  { q: "Fleisch- und Sojaproduktion sind Gründe für die Abholzung des Regenwaldes.", a: true },
+  { q: "Auch für Biodiesel wird der Regenwald abgeholzt.", a: true },
+  { q: "Die Menschen zerstören den Regenwald rücksichtslos.", a: true },
+  { q: "Der berühmte Amazonas-Regenwald liegt in Südamerika.", a: true },
+  { q: "Der tropische Regenwald liegt rund um den Äquator.", a: true },
+  { q: "In Afrika gibt es keinen tropischen Regenwald.", a: false },
+  { q: "Sogar in Asien gibt es tropischen Regenwald.", a: true },
+  { q: "Der Regenwald wächst am Fluss Amazonas.", a: true },
+  { q: "Aluminium ist ein Rohstoff, für den der Regenwald abgeholzt wird.", a: true },
+];
+
+// ════════════════════════════════════════════════════════════════
+// SCHWER — Multiple Choice (kein Kolibri, kein Frosch, keine Früchte/Pflanzen)
+// Tiere nur im Stockwerk-Kontext erlaubt
+// ════════════════════════════════════════════════════════════════
+
+const H_WETTER = [
+  { q: "Was passiert am Nachmittag im Regenwald?", opts: ["Es regnet sofort stark.", "Die Wolken werden dichter und es ist drückend heiss.", "Es liegt Nebel über dem Wald.", "Die Sonne scheint besonders hell."], a: 1 },
+  { q: "Wieso heisst der Regenwald Regenwald?", opts: ["Weil er immer überschwemmt ist.", "Weil es dort immer schneit.", "Weil es fast jeden Tag regnet.", "Weil er am Fluss liegt."], a: 2 },
+  { q: "Was passiert am frühen Abend im Regenwald?", opts: ["Es liegt Nebel über dem Wald.", "Es gewittert und regnet stark.", "Die Sonne scheint am stärksten.", "Es ist angenehm kühl."], a: 1 },
+  { q: "Wie ist das Wetter im Regenwald über das ganze Jahr?", opts: ["Es gibt vier klare Jahreszeiten.", "Es ist immer kalt und nass.", "Es ist an allen Tagen etwa gleich.", "Im Winter ist es sehr trocken."], a: 2 },
+  { q: "Was passiert am Morgen im Regenwald?", opts: ["Es regnet sofort stark.", "Nebel liegt über dem Wald und die Sonne dringt langsam durch.", "Die Sonne scheint gleich kräftig.", "Es ist völlig klar und trocken."], a: 1 },
+  { q: "Wie ist das Wetter am Mittag im Regenwald?", opts: ["Kühl und bewölkt.", "Neblig und feucht.", "Sehr warm, die Sonne scheint stark.", "Es regnet bereits stark."], a: 2 },
+  { q: "Was bildet sich am Mittag im Regenwald neben Sonnenschein?", opts: ["Schnee", "Hagel", "Kleine Wolken", "Dicker Nebel"], a: 2 },
+  { q: "Wann steigt im Regenwald Nebel auf?", opts: ["Am Morgen und am späten Abend.", "Nur am Mittag.", "Nur wenn es regnet.", "Gar nicht."], a: 0 },
+];
+
+const H_STOCKWERKE = [
+  // Kronendach
+  { q: "Wie heisst die Schicht, in der die meisten Tiere leben?", opts: ["Bodenschicht", "Kraut- & Strauchschicht", "Untere Baumschicht", "Obere Baumschicht (Kronendach)"], a: 3 },
+  { q: "Welche Tiere findet man vor allem im Kronendach?", opts: ["Tapire und Pilze", "Nur Insekten", "Vögel, Affen und Faultiere", "Keine Tiere"], a: 2 },
+  { q: "Warum können Tiere im Kronendach gut leben?", opts: ["Weil es dort am dunkelsten ist.", "Weil sie gut fliegen oder klettern können.", "Weil es dort am feuchtesten ist.", "Weil dort keine Feinde leben."], a: 1 },
+  // Überständer
+  { q: "Was sind Überständer?", opts: ["Junge Bäume, die gerade wachsen.", "Einzelne Baumriesen, die über alle anderen ragen.", "Die Wurzeln der grossen Bäume.", "Kleine Sträucher am Boden."], a: 1 },
+  { q: "Welcher Vogel nutzt die Überständer, um nach Beute zu spähen?", opts: ["Kolibri", "Papagei", "Harpyie", "Tukan"], a: 2 },
+  { q: "Wie heisst der Greifvogel, der in den Überständern lebt?", opts: ["Tukan", "Papagei", "Adler", "Harpyie"], a: 3 },
+  // Untere Baumschicht
+  { q: "Was wächst in der unteren Baumschicht?", opts: ["Riesige Baumkronen", "Hauptsächlich junge Bäume", "Nur Wurzeln und Pilze", "Moose und Farne"], a: 1 },
+  { q: "Was kann mit jungen Bäumen der unteren Schicht passieren?", opts: ["Sie sterben immer ab.", "Manche werden später zu riesigen Baumriesen.", "Sie bleiben immer klein.", "Sie wachsen in die Bodenschicht."], a: 1 },
+  // Kraut- & Strauchschicht
+  { q: "Was wächst in der Kraut- & Strauchschicht?", opts: ["Riesige Baumkronen", "Moose, Farne, Sträucher und kleine Bäume", "Nur Wurzeln und Pilze", "Einzelne Baumriesen"], a: 1 },
+  { q: "Welches Tier lebt im Unterholz der Kraut- & Strauchschicht?", opts: ["Affe", "Faultier", "Tapir", "Harpyie"], a: 2 },
+  { q: "Welche Pflanzen wachsen in der Kraut- & Strauchschicht?", opts: ["Nur hohe Bäume", "Pflanzen, die wenig Sonnenlicht brauchen", "Pflanzen, die viel Sonne brauchen", "Nur Pilze"], a: 1 },
+  // Bodenschicht
+  { q: "Was findet man in der Bodenschicht?", opts: ["Vögel und Affen", "Baumkronen junger Bäume", "Wurzeln, Äste, abgestorbene Blätter und Pilze", "Moose und Farne"], a: 2 },
+  { q: "Wie ist es in der Bodenschicht des Regenwaldes?", opts: ["Hell und warm.", "Sehr dunkel.", "Windig und kalt.", "Trocken und staubig."], a: 1 },
+  { q: "Woraus besteht die Bodenschicht hauptsächlich?", opts: ["Sand und Steine", "Wurzeln, Pilze und abgestorbene Blätter", "Blumen und Gras", "Moos und Schnee"], a: 1 },
+  // Allgemein
+  { q: "Wie viele Schichten hat der Regenwald?", opts: ["Zwei", "Drei", "Vier", "Fünf"], a: 3 },
+  { q: "Wie hoch können Regenwaldbäume werden?", opts: ["Bis zu 10 Meter", "Bis zu 30 Meter", "Bis zu 50 Meter", "Über 70 Meter"], a: 3 },
+  { q: "Warum wächst in der Kraut- & Strauchschicht wenig Licht?", opts: ["Weil es zu kalt ist.", "Weil das Kronendach das Licht abfängt.", "Weil die Bäume zu dünn sind.", "Weil es dort immer regnet."], a: 1 },
+];
+
+const H_SCHOKOLADE = [
+  { q: "Wo wächst der Kakaobaum?", opts: ["In kalten Bergregionen", "Im tropischen Regenwald", "In der Wüste", "In Mitteleuropa"], a: 1 },
+  { q: "Was sind Kakaobohnen genau?", opts: ["Die Blätter des Kakaobaums", "Die Samen der Kakaofrucht", "Die Wurzeln des Kakaobaums", "Eine Art Pilz"], a: 1 },
+  { q: "Was geschieht mit den Kakaobohnen nach der Ernte zuerst?", opts: ["Sie werden geröstet.", "Sie werden gemahlen.", "Sie gären zwischen grossen Blättern.", "Sie werden mit Zucker vermischt."], a: 2 },
+  { q: "Wie werden die Kakaobohnen danach getrocknet?", opts: ["Im Ofen", "In der Sonne", "Mit Ventilatoren", "Im Kühlraum"], a: 1 },
+  { q: "Wie kommen die Kakaobohnen in andere Länder?", opts: ["Mit dem Flugzeug", "Mit dem Zug", "Mit Schiffen", "Mit dem Lastwagen"], a: 2 },
+  { q: "Was passiert nach dem Trocknen der Kakaobohnen in der Fabrik?", opts: ["Sie werden sofort gegessen.", "Sie werden gereinigt und geröstet.", "Sie werden eingefroren.", "Sie werden gepflanzt."], a: 1 },
+  { q: "Was wird der gemahlenen Kakaomasse zugefügt?", opts: ["Salz", "Mehl", "Zucker", "Wasser"], a: 2 },
+  { q: "Wie wird aus Kakaomasse eine Schokoladentafel?", opts: ["Man friert sie ein.", "Man füllt sie in Formen und lässt sie abkühlen.", "Man trocknet sie in der Sonne.", "Man backt sie im Ofen."], a: 1 },
+];
+
+const H_ABHOLZUNG = [
+  { q: "Wofür wird der Regenwald NICHT abgeholzt?", opts: ["Für Tropenholz", "Für Palmöl", "Für saubere Bergluft", "Für Fleisch & Soja"], a: 2 },
+  { q: "Was ist Biodiesel im Zusammenhang mit dem Regenwald?", opts: ["Ein Baum im Regenwald", "Ein Treibstoff, für den Regenwald gerodet wird", "Ein Schutzprogramm für den Wald", "Eine Tierart"], a: 1 },
+  { q: "Tropenholz ist sehr begehrt.", opts: ["Falsch, niemand will es.", "Richtig, deshalb wird der Regenwald dafür abgeholzt.", "Nur in Asien wird es gebraucht.", "Es wird nur für Papier verwendet."], a: 1 },
+  { q: "An welchem Fluss wächst der bekannteste Regenwald?", opts: ["Rhein", "Nil", "Donau", "Amazonas"], a: 3 },
+  { q: "Auf welchem Kontinent gibt es KEINEN tropischen Regenwald?", opts: ["Südamerika", "Afrika", "Europa", "Asien"], a: 2 },
+  { q: "Der tropische Regenwald liegt rund um den ...", opts: ["Nordpol", "Äquator", "Südpol", "Atlantischen Ozean"], a: 1 },
+  { q: "In welchen Kontinenten gibt es tropischen Regenwald?", opts: ["Nur in Südamerika.", "Nur in Afrika.", "In Südamerika, Afrika und Asien.", "Überall auf der Welt."], a: 2 },
+  { q: "Was ist Palmöl?", opts: ["Ein Holz aus dem Regenwald", "Ein Treibstoff", "Ein Öl aus der Palmfrucht, für das Regenwald gerodet wird", "Ein Tier aus dem Dschungel"], a: 2 },
+  { q: "Welches Produkt steckt oft versteckt in Lebensmitteln und schadet dem Regenwald?", opts: ["Zucker", "Palmöl", "Mehl", "Salz"], a: 1 },
+];
+
+// ════════════════════════════════════════════════════════════════
+// MISCHEN — abwechslungsreich, je Themengruppe gleich viele
+// ════════════════════════════════════════════════════════════════
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function interleave(groups) {
+  // groups = [[q,q,...], [q,q,...], ...]
+  // nimmt reihum je eine Frage aus jeder Gruppe
+  const result = [];
+  const iters = groups.map(g => shuffle(g)[Symbol.iterator]());
+  let added = true;
+  while (added) {
+    added = false;
+    for (const it of iters) {
+      const { value, done } = it.next();
+      if (!done) { result.push(value); added = true; }
+    }
+  }
+  return result;
+}
+
+function buildEasy() {
+  // 4 Wetter, 5 Stockwerke, 3 Tiere, 3 Abholzung = 15
+  const w  = shuffle(E_WETTER).slice(0, 4);
+  const st = shuffle(E_STOCKWERKE).slice(0, 5);
+  const ti = shuffle(E_TIERE).slice(0, 3);
+  const ab = shuffle(E_ABHOLZUNG).slice(0, 3);
+  return interleave([w, st, ti, ab]);
+}
+
+function buildHard() {
+  // 3 Wetter, 6 Stockwerke, 3 Schokolade, 3 Abholzung = 15
+  const w  = shuffle(H_WETTER).slice(0, 3);
+  const st = shuffle(H_STOCKWERKE).slice(0, 6);
+  const sc = shuffle(H_SCHOKOLADE).slice(0, 3);
+  const ab = shuffle(H_ABHOLZUNG).slice(0, 3);
+  return interleave([st, w, ab, sc]);
+}
+
+// ════════════════════════════════════════════════════════════════
+// STATE & GAME LOGIC
+// ════════════════════════════════════════════════════════════════
+
+let mode = 'easy', questions = [], current = 0, correct = 0, wrong = 0, answered = false;
+
+function startGame(m) {
+  mode = m; correct = 0; wrong = 0; current = 0; answered = false;
+  questions = mode === 'easy' ? buildEasy() : buildHard();
+  document.getElementById('start').style.display = 'none';
+  document.getElementById('win').style.display = 'none';
+  document.getElementById('game').style.display = 'flex';
+  document.getElementById('back-btn').style.display = 'block';
+  buildSegments();
+  loadQuestion();
+}
+
+function showStart() {
+  document.getElementById('game').style.display = 'none';
+  document.getElementById('win').style.display = 'none';
+  document.getElementById('start').style.display = 'flex';
+  document.getElementById('back-btn').style.display = 'none';
+  document.getElementById('score-display').textContent = '0 / 0';
+}
+
+function restartSame() { startGame(mode); }
+
+function buildSegments() {
+  const wrap = document.getElementById('segments');
+  wrap.innerHTML = '';
+  questions.forEach((_, i) => {
+    const seg = document.createElement('div');
+    seg.className = 'seg' + (i === 0 ? ' active' : '');
+    seg.id = 'seg-' + i;
+    wrap.appendChild(seg);
+  });
+}
+
+function updateSegment(idx, ok) {
+  const seg = document.getElementById('seg-' + idx);
+  if (!seg) return;
+  seg.classList.remove('active');
+  seg.classList.add(ok ? 'done-correct' : 'done-wrong');
+  const next = document.getElementById('seg-' + (idx + 1));
+  if (next) next.classList.add('active');
+}
+
+function loadQuestion() {
+  answered = false;
+  const q = questions[current];
+  const total = questions.length;
+  document.getElementById('prog-text').textContent = `Frage ${current + 1} von ${total}`;
+  document.getElementById('prog-score').innerHTML = `✅ ${correct} &nbsp; ❌ ${wrong}`;
+  document.getElementById('score-display').textContent = `${correct} / ${current}`;
+  document.getElementById('question-num').textContent = `Frage ${current + 1}`;
+  document.getElementById('question-text').textContent = q.q;
+  document.getElementById('question-card').className = '';
+  const ans = document.getElementById('answers');
+  ans.innerHTML = '';
+
+  if (mode === 'easy') {
+    const row = document.createElement('div');
+    row.className = 'rf-row';
+    const rBtn = document.createElement('button');
+    rBtn.className = 'rf-btn richtig';
+    rBtn.innerHTML = '✅ Richtig';
+    rBtn.onclick = () => checkEasy(true);
+    const fBtn = document.createElement('button');
+    fBtn.className = 'rf-btn falsch';
+    fBtn.innerHTML = '❌ Falsch';
+    fBtn.onclick = () => checkEasy(false);
+    row.appendChild(rBtn); row.appendChild(fBtn);
+    ans.appendChild(row);
+  } else {
+    const opts = q.opts.map((o, i) => ({ text: o, orig: i }));
+    const sh = shuffle(opts);
+    window._corr = sh.findIndex(o => o.orig === q.a);
+    sh.forEach((opt, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'mc-btn';
+      btn.innerHTML = `<span class="mc-letter">${'ABCD'[i]}</span> ${opt.text}`;
+      btn.onclick = () => checkHard(i, window._corr);
+      ans.appendChild(btn);
+    });
+  }
+}
+
+function checkEasy(chosen) {
+  if (answered) return;
+  answered = true;
+  const ok = chosen === questions[current].a;
+  const btns = document.querySelectorAll('.rf-btn');
+  btns.forEach(b => b.disabled = true);
+  if (ok) {
+    correct++;
+    btns[chosen ? 0 : 1].classList.add('chosen-correct');
+    document.getElementById('question-card').classList.add('card-correct');
+    updateSegment(current, true);
+    refreshScore();
+    setTimeout(nextQuestion, 700);
+  } else {
+    wrong++;
+    btns[chosen ? 0 : 1].classList.add('chosen-wrong');
+    btns[questions[current].a ? 0 : 1].classList.add('reveal-correct');
+    document.getElementById('question-card').classList.add('card-wrong');
+    updateSegment(current, false);
+    refreshScore();
+    setTimeout(nextQuestion, 5000);
+  }
+}
+
+function checkHard(chosen, corrIdx) {
+  if (answered) return;
+  answered = true;
+  const ok = chosen === corrIdx;
+  const btns = document.querySelectorAll('.mc-btn');
+  btns.forEach(b => b.disabled = true);
+  if (ok) {
+    correct++;
+    btns[chosen].classList.add('chosen-correct');
+    document.getElementById('question-card').classList.add('card-correct');
+    updateSegment(current, true);
+    refreshScore();
+    setTimeout(nextQuestion, 700);
+  } else {
+    wrong++;
+    btns[chosen].classList.add('chosen-wrong');
+    btns[corrIdx].classList.add('reveal-correct');
+    document.getElementById('question-card').classList.add('card-wrong');
+    updateSegment(current, false);
+    refreshScore();
+    setTimeout(nextQuestion, 5000);
+  }
+}
+
+function refreshScore() {
+  document.getElementById('prog-score').innerHTML = `✅ ${correct} &nbsp; ❌ ${wrong}`;
+  document.getElementById('score-display').textContent = `${correct} / ${current + 1}`;
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= questions.length) showWin();
+  else loadQuestion();
+}
+
+function showWin() {
+  document.getElementById('game').style.display = 'none';
+  document.getElementById('win').style.display = 'flex';
+  const total = questions.length, pct = correct / total;
+  document.getElementById('win-score').textContent = `${correct} / ${total}`;
+  document.getElementById('score-display').textContent = `${correct} / ${total}`;
+  let stars, title, msg;
+  if      (pct >= 0.9) { stars='⭐⭐⭐'; title='Regenwald-Experte! 🌴'; msg='Fantastisch! Du weisst fast alles über den Regenwald!'; }
+  else if (pct >= 0.7) { stars='⭐⭐';  title='Super gemacht! 🦜';      msg='Du kennst den Regenwald schon sehr gut!'; }
+  else if (pct >= 0.5) { stars='⭐';   title='Gut versucht! 🌿';       msg='Du hast schon viel gelernt. Versuch es nochmal!'; }
+  else                 { stars='';     title='Weiter üben! 🐸';         msg='Der Regenwald wartet auf dich! Versuch es noch einmal.'; }
+  document.getElementById('win-stars').textContent = stars;
+  document.getElementById('win-title').textContent = title;
+  document.getElementById('win-msg').textContent = msg;
+}
+
+// ════════════════════════════════════════════════════════════════
+// DEKORATION — Blätter am Rand des Hintergrunds
+// ════════════════════════════════════════════════════════════════
+(function decorate() {
+  const bg = document.getElementById('jungle-bg');
+  const spots = [
+    { left: -4,  top: -6,  size: 150, rot: 205 },
+    { left: 14,  top: -8,  size: 110, rot: 230 },
+    { left: 80,  top: -7,  size: 140, rot: 320 },
+    { left: 96,  top: -5,  size: 100, rot: 300 },
+    { left: 4,   bottom: -8, size: 130, rot: 20 },
+    { left: 26,  bottom: -10, size: 95,  rot: -15 },
+    { left: 68,  bottom: -9, size: 120, rot: 10 },
+    { left: 90,  bottom: -7, size: 100, rot: -25 },
+  ];
+  spots.forEach(s => {
+    const leaf = document.createElement('div');
+    leaf.className = 'leaf-deco';
+    leaf.style.width = s.size + 'px';
+    leaf.style.height = (s.size * 1.3) + 'px';
+    leaf.style.left = s.left + '%';
+    if (s.top !== undefined) leaf.style.top = s.top + '%';
+    if (s.bottom !== undefined) leaf.style.bottom = s.bottom + '%';
+    leaf.style.transform = `rotate(${s.rot}deg)`;
+    bg.appendChild(leaf);
+  });
+
+  // leicht fallende Blätter — ein Mix aus Blatt-Glyphen und weichen Punkten für Tiefe
+  const leafChars = ['🍃', '🌿'];
+  const leafCount = 20;
+  for (let i = 0; i < leafCount; i++) {
+    const f = document.createElement('div');
+    const isDot = Math.random() < 0.35;
+    f.className = 'leaf-particle ' + (isDot ? 'dot' : 'glyph');
+    const size = isDot ? 4 + Math.random() * 6 : 14 + Math.random() * 14;
+    if (isDot) {
+      f.style.width = size + 'px';
+      f.style.height = size + 'px';
+    } else {
+      f.textContent = leafChars[Math.floor(Math.random() * leafChars.length)];
+      f.style.fontSize = size + 'px';
+    }
+    f.style.left = Math.random() * 100 + '%';
+    f.style.animationDuration = (9 + Math.random() * 12) + 's';
+    f.style.animationDelay = (Math.random() * 14) + 's';
+    bg.appendChild(f);
+  }
+})();
+</script>
+</body>
+</html>
